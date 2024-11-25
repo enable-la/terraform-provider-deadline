@@ -28,17 +28,43 @@ type FleetResource struct {
 	client *deadline.Client
 }
 
+type FleetResourceConfigurationModel struct {
+	Mode                    types.String                              `tfsdk:"mode"`
+	Ec2MarketType           types.String                              `tfsdk:"ec2_market_type"`
+	Ec2InstanceCapabilities FleetResourceEc2InstanceCapabilitiesModel `tfsdk:"ec2_instance_capabilities"`
+}
+
+type FleetResourceEc2InstanceCapabilitiesModel struct {
+	CpuArchitecture         types.String                                                     `tfsdk:"cpu_architecture"`
+	MinCpuCount             types.Int32                                                      `tfsdk:"min_cpu_count"`
+	MaxCpuCount             types.Int32                                                      `tfsdk:"max_cpu_count"`
+	MemoryMib               types.Int32                                                      `tfsdk:"memory_mib"`
+	OsFamily                types.String                                                     `tfsdk:"os_family"`
+	AllowedInstanceType     types.List                                                       `tfsdk:"allowed_instance_types"`
+	ExcludeInstanceType     types.List                                                       `tfsdk:"exclude_instance_types"`
+	AcceleratorCapabilities FleetResourceEc2InstanceCapabilitiesAcceleratorCapabilitiesModel `tfsdk:"accelerator_capabilities"`
+}
+
+func (r *FleetResourceEc2InstanceCapabilitiesModel) Value() {
+
+}
+
+type FleetResourceEc2InstanceCapabilitiesAcceleratorCapabilitiesModel struct {
+	Selections types.ListType `tfsdk:"selections"`
+	Count      types.Int32    `tfsdk:"count"`
+}
+
 // FleetResourceModel describes the resource data model.
 type FleetResourceModel struct {
-	DisplayName    types.String `tfsdk:"display_name"`
-	Description    types.String `tfsdk:"description"`
-	FarmId         types.String `tfsdk:"farm_id"`
-	MinWorkerCount types.Int32  `tfsdk:"min_worker_count"`
-	MaxWorkerCount types.Int32  `tfsdk:"max_worker_count"`
-	RoleArn        types.String `tfsdk:"role_arn"`
-	Configuration  types.String `tfsdk:"configuration"`
-	ID             types.String `tfsdk:"id"`
-	FleetID        types.String `tfsdk:"fleet_id"`
+	DisplayName    types.String                    `tfsdk:"display_name"`
+	Description    types.String                    `tfsdk:"description"`
+	FarmId         types.String                    `tfsdk:"farm_id"`
+	MinWorkerCount types.Int32                     `tfsdk:"min_worker_count"`
+	MaxWorkerCount types.Int32                     `tfsdk:"max_worker_count"`
+	RoleArn        types.String                    `tfsdk:"role_arn"`
+	ID             types.String                    `tfsdk:"id"`
+	FleetID        types.String                    `tfsdk:"fleet_id"`
+	Configuration  FleetResourceConfigurationModel `tfsdk:"configuration"`
 }
 
 func (r *FleetResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -56,12 +82,19 @@ func (r *FleetResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 						Blocks: map[string]schema.Block{
 							"accelerator_capabilities": schema.SingleNestedBlock{
 								Attributes: map[string]schema.Attribute{
-									"selections": schema.ListAttribute{
-										ElementType: types.ListType{},
-										Required:    true,
+									"selections": schema.ListNestedAttribute{
+										NestedObject: schema.NestedAttributeObject{
+											Attributes: map[string]schema.Attribute{
+												"name": schema.StringAttribute{Required: true},
+												"runtime": schema.StringAttribute{
+													Optional: true,
+												},
+											},
+										},
+										Optional: true,
 									},
 									"count": schema.Int32Attribute{
-										Required:    true,
+										Optional:    true,
 										Description: "The minimum number of accelerators that can be attached to the instance.If you set the value to 0, a worker will still have 1 GPU.",
 									},
 								},
@@ -87,7 +120,8 @@ func (r *FleetResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 							"cpu_architecture": schema.StringAttribute{
 								Required: true,
 							},
-							"cpu_count": schema.Int32Attribute{Required: true},
+							"min_cpu_count": schema.Int32Attribute{Required: true},
+							"max_cpu_count": schema.Int32Attribute{Required: true},
 							"memory_mib": schema.Int32Attribute{
 								Required: true,
 							},
@@ -95,11 +129,11 @@ func (r *FleetResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 								Required: true,
 							},
 							"allowed_instance_types": schema.ListAttribute{
-								ElementType: types.ListType{},
+								ElementType: types.StringType,
 								Optional:    true,
 							},
 							"exclude_instance_types": schema.ListAttribute{
-								ElementType: types.ListType{},
+								ElementType: types.StringType,
 								Optional:    true,
 							},
 						},
@@ -183,17 +217,29 @@ func (r *FleetResource) Create(ctx context.Context, req resource.CreateRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	var configurationType dltypes.FleetConfiguration
-	if data.Configuration.String() == "customer_managed" {
+	if data.Configuration.Mode.ValueString() == "customer_managed" {
 		configurationType = &dltypes.FleetConfigurationMemberCustomerManaged{
 			Value: dltypes.CustomerManagedFleetConfiguration{
 				Mode: dltypes.AutoScalingModeEventBasedAutoScaling,
 			},
 		}
 	} else {
+		archType := dltypes.CpuArchitectureTypeX8664
+		archTypeSelector := dltypes.CpuArchitectureType(data.Configuration.Ec2InstanceCapabilities.CpuArchitecture.ValueString())
+		if archTypeSelector == "arm64" {
+			archType = dltypes.CpuArchitectureTypeArm64
+		}
 		configurationType = &dltypes.FleetConfigurationMemberServiceManagedEc2{
 			Value: dltypes.ServiceManagedEc2FleetConfiguration{
-				InstanceCapabilities:  &dltypes.ServiceManagedEc2InstanceCapabilities{},
+				InstanceCapabilities: &dltypes.ServiceManagedEc2InstanceCapabilities{
+					CpuArchitectureType: archType,
+					VCpuCount: &dltypes.VCpuCountRange{
+						Min: data.Configuration.Ec2InstanceCapabilities.MinCpuCount.ValueInt32Pointer(),
+						Max: data.Configuration.Ec2InstanceCapabilities.MaxCpuCount.ValueInt32Pointer(),
+					},
+				},
 				InstanceMarketOptions: &dltypes.ServiceManagedEc2InstanceMarketOptions{},
 			},
 		}
