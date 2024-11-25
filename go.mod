@@ -1,4 +1,4 @@
-module github.com/jdziat/terraform-provider-aws-deadline
+module github.com/enable-la/terraform-provider-aws-deadline
 
 go 1.23.3
 
