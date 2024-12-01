@@ -31,7 +31,6 @@ type FarmResource struct {
 type FarmResourceModel struct {
 	DisplayName types.String `tfsdk:"display_name"`
 	Description types.String `tfsdk:"description"`
-	FarmId      types.String `tfsdk:"farm_id"`
 	ID          types.String `tfsdk:"id"`
 }
 
@@ -51,10 +50,6 @@ func (r *FarmResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"description": schema.StringAttribute{
 				MarkdownDescription: "The description of the farm.",
 				Optional:            true,
-			},
-			"farm_id": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "The ID of the farm.",
 			},
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -102,7 +97,6 @@ func (r *FarmResource) Create(ctx context.Context, req resource.CreateRequest, r
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create %s, %s, got error: %s", r.typeName(), data.DisplayName.String(), err))
 		return
 	}
-	data.FarmId = types.StringValue(*farmOutput.FarmId)
 	data.ID = types.StringValue(*farmOutput.FarmId)
 	tflog.Trace(ctx, fmt.Sprintf("created %s", r.typeName()))
 	// Save data into Terraform state
@@ -119,7 +113,7 @@ func (r *FarmResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 	farmResponse, err := r.client.GetFarm(ctx, &deadline.GetFarmInput{
-		FarmId: data.FarmId.ValueStringPointer(),
+		FarmId: data.ID.ValueStringPointer(),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read %s, got error: %s", r.typeName(), err))
@@ -141,7 +135,7 @@ func (r *FarmResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 	updateRequest := deadline.UpdateFarmInput{
-		FarmId:      data.FarmId.ValueStringPointer(),
+		FarmId:      data.ID.ValueStringPointer(),
 		Description: data.Description.ValueStringPointer(),
 		DisplayName: data.DisplayName.ValueStringPointer(),
 	}

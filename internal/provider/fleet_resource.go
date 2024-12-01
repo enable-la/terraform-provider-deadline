@@ -43,10 +43,13 @@ type FleetResourceEc2InstanceCapabilitiesModel struct {
 	AllowedInstanceType     types.List                                                       `tfsdk:"allowed_instance_types"`
 	ExcludeInstanceType     types.List                                                       `tfsdk:"exclude_instance_types"`
 	AcceleratorCapabilities FleetResourceEc2InstanceCapabilitiesAcceleratorCapabilitiesModel `tfsdk:"accelerator_capabilities"`
+	RootEBSVolume           FleetResourceEc2InstanceCapabilitiesRootEBSVolumeModel           `tfsdk:"root_ebs_volume"`
 }
 
-func (r *FleetResourceEc2InstanceCapabilitiesModel) Value() {
-
+type FleetResourceEc2InstanceCapabilitiesRootEBSVolumeModel struct {
+	IOPs       types.Int32 `tfsdk:"iops"`
+	Size       types.Int32 `tfsdk:"size"`
+	Throughput types.Int32 `tfsdk:"throughput"`
 }
 
 type FleetResourceEc2InstanceCapabilitiesAcceleratorCapabilitiesModel struct {
@@ -63,7 +66,6 @@ type FleetResourceModel struct {
 	MaxWorkerCount types.Int32                     `tfsdk:"max_worker_count"`
 	RoleArn        types.String                    `tfsdk:"role_arn"`
 	ID             types.String                    `tfsdk:"id"`
-	FleetID        types.String                    `tfsdk:"fleet_id"`
 	Configuration  FleetResourceConfigurationModel `tfsdk:"configuration"`
 }
 
@@ -176,10 +178,6 @@ func (r *FleetResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Required:            true,
 				MarkdownDescription: "The ID of the farm.",
 			},
-			"fleet_id": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "The ID of the fleet.",
-			},
 			"id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The ID of the fleet.",
@@ -258,7 +256,6 @@ func (r *FleetResource) Create(ctx context.Context, req resource.CreateRequest, 
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create %s, %s, got error: %s", r.typeName(), data.DisplayName.String(), err))
 		return
 	}
-	data.FleetID = types.StringValue(*createOutput.FleetId)
 	data.ID = types.StringValue(*createOutput.FleetId)
 	tflog.Trace(ctx, fmt.Sprintf("created %s", r.typeName()))
 	// Save data into Terraform state
