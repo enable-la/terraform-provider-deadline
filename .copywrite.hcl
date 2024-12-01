@@ -1,4 +1,3 @@
-# NOTE: This file is for HashiCorp specific licensing automation and can be deleted after creating a new repo with this template.
 schema_version = 1
 
 project {
@@ -8,6 +7,9 @@ project {
   header_ignore = [
     # examples used within documentation (prose)
     "examples/**",
+
+    # ignore IDE related files
+    ".idea/**",
 
     # GitHub issue template configuration
     ".github/ISSUE_TEMPLATE/*.yml",

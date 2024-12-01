@@ -80,6 +80,7 @@ func (r *AssociateMemberToFleetResource) Schema(ctx context.Context, req resourc
 			},
 			"principal_type": schema.StringAttribute{
 				MarkdownDescription: "The type of principal to associate to the fleet. Valid values are `USER` and `GROUP`",
+				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
