@@ -296,18 +296,45 @@ func (r *FleetResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	updateRequest := deadline.UpdateFarmInput{
+	request := &deadline.UpdateFleetInput{
 		FarmId:      data.FarmId.ValueStringPointer(),
 		Description: data.Description.ValueStringPointer(),
 		DisplayName: data.DisplayName.ValueStringPointer(),
 	}
-	_, err := r.client.UpdateFarm(ctx, &updateRequest)
+	var configurationType dltypes.FleetConfiguration
+	if data.Configuration.Mode.ValueString() == "customer_managed" {
+		configurationType = &dltypes.FleetConfigurationMemberCustomerManaged{
+			Value: dltypes.CustomerManagedFleetConfiguration{
+				Mode: dltypes.AutoScalingModeEventBasedAutoScaling,
+			},
+		}
+	} else {
+		archType := dltypes.CpuArchitectureTypeX8664
+		archTypeSelector := dltypes.CpuArchitectureType(data.Configuration.Ec2InstanceCapabilities.CpuArchitecture.ValueString())
+		if archTypeSelector == "arm64" {
+			archType = dltypes.CpuArchitectureTypeArm64
+		}
+		configurationType = &dltypes.FleetConfigurationMemberServiceManagedEc2{
+			Value: dltypes.ServiceManagedEc2FleetConfiguration{
+				InstanceCapabilities: &dltypes.ServiceManagedEc2InstanceCapabilities{
+					CpuArchitectureType: archType,
+					VCpuCount: &dltypes.VCpuCountRange{
+						Min: data.Configuration.Ec2InstanceCapabilities.MinCpuCount.ValueInt32Pointer(),
+						Max: data.Configuration.Ec2InstanceCapabilities.MaxCpuCount.ValueInt32Pointer(),
+					},
+				},
+				InstanceMarketOptions: &dltypes.ServiceManagedEc2InstanceMarketOptions{},
+			},
+		}
+	}
+	request.Configuration = configurationType
+	_, err := r.client.UpdateFleet(ctx, request)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update %s, got error: %s", r.typeName(), err))
 		return
 	}
-	data.Description = types.StringValue(*updateRequest.Description)
-	data.DisplayName = types.StringValue(*updateRequest.DisplayName)
+	data.Description = types.StringValue(*request.Description)
+	data.DisplayName = types.StringValue(*request.DisplayName)
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -322,6 +349,7 @@ func (r *FleetResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 	deleteResourceRequest := &deadline.DeleteFleetInput{
+		FarmId:  data.FarmId.ValueStringPointer(),
 		FleetId: data.ID.ValueStringPointer(),
 	}
 	_, err := r.client.DeleteFleet(ctx, deleteResourceRequest)

@@ -205,18 +205,6 @@ func (r *QueueResource) Configure(ctx context.Context, req resource.ConfigureReq
 	r.client = client
 }
 
-func (r *QueueResource) createQueueInput(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse, data QueueResourceModel) deadline.CreateQueueInput {
-
-	rsp := deadline.CreateQueueInput{
-		DisplayName: data.DisplayName.ValueStringPointer(),
-		Description: data.Description.ValueStringPointer(),
-		FarmId:      data.FarmId.ValueStringPointer(),
-		RoleArn:     data.RoleArn.ValueStringPointer(),
-	}
-
-	return rsp
-}
-
 func (r *QueueResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data QueueResourceModel
 
@@ -226,7 +214,7 @@ func (r *QueueResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	createRequest := deadline.CreateQueueInput{
+	createRequest := &deadline.CreateQueueInput{
 		FarmId:      data.FarmId.ValueStringPointer(),
 		DisplayName: data.DisplayName.ValueStringPointer(),
 		Description: data.Description.ValueStringPointer(),
@@ -273,7 +261,7 @@ func (r *QueueResource) Create(ctx context.Context, req resource.CreateRequest, 
 			return
 		}
 	}
-	createOutput, err := r.client.CreateQueue(ctx, &createRequest)
+	createOutput, err := r.client.CreateQueue(ctx, createRequest)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create %s, %s, got error: %s", r.typeName(), data.DisplayName.String(), err))
 		return
@@ -304,6 +292,9 @@ func (r *QueueResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	data.DisplayName = types.StringValue(*getResponse.DisplayName)
 	data.FarmId = types.StringValue(*getResponse.FarmId)
 	data.RoleArn = types.StringValue(*getResponse.RoleArn)
+	data.JobAttachmentSettings.RootPrefix = types.StringValue(*getResponse.JobAttachmentSettings.RootPrefix)
+	data.JobAttachmentSettings.S3BucketName = types.StringValue(*getResponse.JobAttachmentSettings.S3BucketName)
+
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -317,12 +308,53 @@ func (r *QueueResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	updateRequest := deadline.UpdateFarmInput{
+	updateRequest := &deadline.UpdateQueueInput{
 		FarmId:      data.FarmId.ValueStringPointer(),
 		Description: data.Description.ValueStringPointer(),
 		DisplayName: data.DisplayName.ValueStringPointer(),
 	}
-	_, err := r.client.UpdateFarm(ctx, &updateRequest)
+	if len(data.AllowedStorageProfileIds) > 0 {
+		allowedStorageProfileIds := make([]string, len(data.AllowedStorageProfileIds))
+		for k, v := range data.AllowedStorageProfileIds {
+			allowedStorageProfileIds[k] = v.String()
+		}
+		updateRequest.AllowedStorageProfileIdsToAdd = allowedStorageProfileIds
+	}
+	if data.JobAttachmentSettings.RootPrefix.ValueStringPointer() != nil && data.JobAttachmentSettings.S3BucketName.ValueStringPointer() != nil {
+		if data.JobAttachmentSettings.RootPrefix.ValueString() == "" || data.JobAttachmentSettings.S3BucketName.ValueString() == "" {
+			updateRequest.JobAttachmentSettings = &dltypes.JobAttachmentSettings{
+				RootPrefix:   data.JobAttachmentSettings.RootPrefix.ValueStringPointer(),
+				S3BucketName: data.JobAttachmentSettings.S3BucketName.ValueStringPointer(),
+			}
+		}
+	}
+	if data.JobRunAsUser.PosixUser.User.ValueString() != "" {
+		updateRequest.JobRunAsUser = &dltypes.JobRunAsUser{
+			Posix: &dltypes.PosixUser{
+				Group: data.JobRunAsUser.PosixUser.Group.ValueStringPointer(),
+				User:  data.JobRunAsUser.PosixUser.User.ValueStringPointer(),
+			},
+		}
+	}
+	if data.JobRunAsUser.WindowsUser.User.ValueString() != "" {
+		updateRequest.JobRunAsUser = &dltypes.JobRunAsUser{
+			Windows: &dltypes.WindowsUser{
+				PasswordArn: data.JobRunAsUser.WindowsUser.PasswordArn.ValueStringPointer(),
+				User:        data.JobRunAsUser.WindowsUser.User.ValueStringPointer(),
+			},
+		}
+	}
+	if data.JobRunAsUser.RunAs.ValueString() != "" {
+		if data.JobRunAsUser.RunAs.ValueString() == "QUEUE_CONFIGURED_USER" {
+			updateRequest.JobRunAsUser.RunAs = dltypes.RunAsQueueConfiguredUser
+		} else if data.JobRunAsUser.RunAs.ValueString() == "WORKER_AGENT_USER" {
+			updateRequest.JobRunAsUser.RunAs = dltypes.RunAsWorkerAgentUser
+		} else {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Invalid value for run_as, got %s", data.JobRunAsUser.RunAs.ValueString()))
+			return
+		}
+	}
+	_, err := r.client.UpdateQueue(ctx, updateRequest)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update %s, got error: %s", r.typeName(), err))
 		return
