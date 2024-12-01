@@ -64,6 +64,8 @@ func (p *AWSDeadlineProvider) Resources(ctx context.Context) []func() resource.R
 		NewFarmResource,
 		NewFleetResource,
 		NewQueueResource,
+		NewAssociateMemberToFleetResource,
+		NewAssociateMemberToFarmResource,
 	}
 }
 

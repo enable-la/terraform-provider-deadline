@@ -21,7 +21,7 @@ import (
 var _ resource.Resource = &AssociateMemberToFarmResource{}
 var _ resource.ResourceWithImportState = &AssociateMemberToFarmResource{}
 
-func NewAssociateMemberToAssociateMemberToFarmResource() resource.Resource {
+func NewAssociateMemberToFarmResource() resource.Resource {
 	return &AssociateMemberToFarmResource{}
 }
 
