@@ -8,8 +8,8 @@ import (
 	"flag"
 	"log"
 
+	"github.com/enable-la/terraform-provider-aws-deadline/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/jdziat/terraform-provider-aws-deadline/internal/provider"
 )
 
 var (

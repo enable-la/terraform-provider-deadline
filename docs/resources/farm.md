@@ -32,5 +32,4 @@ resource "deadline_farm" "test" {
 
 ### Read-Only
 
-- `farm_id` (String) The ID of the farm.
 - `id` (String) The ID of the farm.
