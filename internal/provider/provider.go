@@ -7,6 +7,11 @@ import (
 	"context"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/deadline"
+	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-member-to-farm"
+	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-member-to-fleet"
+	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/farm"
+	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/fleet"
+	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/queue"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -61,11 +66,11 @@ func (p *AWSDeadlineProvider) Configure(ctx context.Context, req provider.Config
 
 func (p *AWSDeadlineProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewFarmResource,
-		NewFleetResource,
-		NewQueueResource,
-		NewAssociateMemberToFleetResource,
-		NewAssociateMemberToFarmResource,
+		farm.NewFarmResource,
+		fleet.NewFleetResource,
+		queue.NewQueueResource,
+		associate_member_to_fleet.NewAssociateMemberToFleetResource,
+		associate_member_to_farm.NewAssociateMemberToFarmResource,
 	}
 }
 
