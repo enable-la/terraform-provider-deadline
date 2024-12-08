@@ -22,3 +22,10 @@ testacc:
 	TF_ACC=1 go test -v -cover -timeout 120m  ./...
 
 .PHONY: fmt lint test testacc build install generate
+
+build-generator:
+	go build -C ./tools/generator/ -o ./enablelagen ./main.go
+
+
+generate-terraform: build-generator
+	go generate ./internal/generate/

@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package provider
+package queue
 
 import (
 	"context"
@@ -66,24 +66,24 @@ type QueueResourceJobRunAsUserWindowsUserModel struct {
 	User        types.String `tfsdk:"user"`
 }
 type QueueResourceJobRunAsUserModel struct {
-	PosixUser   QueueResourceJobRunAsUserPosixUserModel   `tfsdk:"posix_user"`
-	WindowsUser QueueResourceJobRunAsUserWindowsUserModel `tfsdk:"windows_user"`
-	RunAs       types.String                              `tfsdk:"run_as"`
+	PosixUser   *QueueResourceJobRunAsUserPosixUserModel   `tfsdk:"posix_user"`
+	WindowsUser *QueueResourceJobRunAsUserWindowsUserModel `tfsdk:"windows_user"`
+	RunAs       types.String                               `tfsdk:"run_as"`
 }
 
 // QueueResourceModel describes the resource data model.
 type QueueResourceModel struct {
-	DisplayName                     types.String                            `tfsdk:"display_name"`
-	Description                     types.String                            `tfsdk:"description"`
-	FarmId                          types.String                            `tfsdk:"farm_id"`
-	RoleArn                         types.String                            `tfsdk:"role_arn"`
-	ID                              types.String                            `tfsdk:"id"`
-	AllowedStorageProfileIds        []types.String                          `tfsdk:"allowed_storage_profile_ids"`
-	DefaultBudgetAction             types.String                            `tfsdk:"default_budget_action"`
-	JobAttachmentSettings           QueueResourceJobAttachmentSettingsModel `tfsdk:"job_attachment_settings"`
-	JobRunAsUser                    *QueueResourceJobRunAsUserModel         `tfsdk:"job_run_as_user"`
-	RequiredFileSystemLocationNames []types.String                          `tfsdk:"required_file_system_location_names"`
-	Tags                            map[string]types.String                 `tfsdk:"tags"`
+	DisplayName                     types.String                             `tfsdk:"display_name"`
+	Description                     types.String                             `tfsdk:"description"`
+	FarmId                          types.String                             `tfsdk:"farm_id"`
+	RoleArn                         types.String                             `tfsdk:"role_arn"`
+	ID                              types.String                             `tfsdk:"id"`
+	AllowedStorageProfileIds        []types.String                           `tfsdk:"allowed_storage_profile_ids"`
+	DefaultBudgetAction             types.String                             `tfsdk:"default_budget_action"`
+	JobAttachmentSettings           *QueueResourceJobAttachmentSettingsModel `tfsdk:"job_attachment_settings"`
+	JobRunAsUser                    *QueueResourceJobRunAsUserModel          `tfsdk:"job_run_as_user"`
+	RequiredFileSystemLocationNames []types.String                           `tfsdk:"required_file_system_location_names"`
+	Tags                            map[string]types.String                  `tfsdk:"tags"`
 }
 
 func (r *QueueResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
