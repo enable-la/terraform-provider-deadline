@@ -288,9 +288,18 @@ func (r *FleetResource) Create(ctx context.Context, req resource.CreateRequest, 
 		RoleArn:        data.RoleArn.ValueStringPointer(),
 		Configuration:  configurationType,
 	}
-	createOutput, err := r.client.CreateFleet(ctx, &createRequest)
+	createOutputRaw, err := r.client.CreateFleet(ctx, &createRequest)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create %s, %s, got error: %s", r.typeName(), data.DisplayName.String(), err))
+		return
+	}
+	if createOutputRaw == nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create %s, %s, got error: %s", r.typeName(), data.DisplayName.String(), "empty response"))
+		return
+	}
+	createOutput := *createOutputRaw
+	if createOutput.FleetId == nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create %s, %s, got error: %s", r.typeName(), data.DisplayName.String(), "empty Fleet"))
 		return
 	}
 	data.ID = types.StringValue(*createOutput.FleetId)
@@ -308,22 +317,6 @@ func (r *FleetResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	getResponse, err := r.client.GetFleet(ctx, &deadline.GetFleetInput{
-		FleetId: data.ID.ValueStringPointer(),
-		FarmId:  data.FarmId.ValueStringPointer(),
-	})
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read %s, got error: %s", r.typeName(), err))
-		return
-	}
-	data.Configuration = &FleetResourceConfigurationModel{
-		Mode: types.StringValue("service_managed"),
-	}
-	data.Description = types.StringValue(*getResponse.Description)
-	data.DisplayName = types.StringValue(*getResponse.DisplayName)
-	data.MinWorkerCount = types.Int32Value(*getResponse.MinWorkerCount)
-	data.MaxWorkerCount = types.Int32Value(*getResponse.MaxWorkerCount)
-	data.RoleArn = types.StringValue(*getResponse.RoleArn)
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

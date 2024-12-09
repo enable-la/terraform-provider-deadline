@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"log"
 )
 
@@ -35,6 +36,7 @@ type AWSDeadlineProvider struct {
 
 // AWSDeadlineProviderModel describes the provider data model.
 type AWSDeadlineProviderModel struct {
+	Region types.String `tfsdk:"region"`
 }
 
 func (p *AWSDeadlineProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -44,7 +46,12 @@ func (p *AWSDeadlineProvider) Metadata(ctx context.Context, req provider.Metadat
 
 func (p *AWSDeadlineProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{},
+		Attributes: map[string]schema.Attribute{
+			"region": schema.StringAttribute{
+				Description: "The AWS region to use for the Deadline API.",
+				Optional:    true,
+			},
+		},
 	}
 }
 
@@ -59,6 +66,9 @@ func (p *AWSDeadlineProvider) Configure(ctx context.Context, req provider.Config
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		log.Fatalf("unable to load SDK config, %v", err)
+	}
+	if data.Region.ValueString() != "" {
+		cfg.Region = data.Region.ValueString()
 	}
 	svc := deadline.NewFromConfig(cfg)
 	resp.DataSourceData = svc
