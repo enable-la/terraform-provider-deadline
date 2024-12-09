@@ -29,21 +29,21 @@ type FleetResource struct {
 }
 
 type FleetResourceConfigurationModel struct {
-	Mode                    types.String                              `tfsdk:"mode"`
-	Ec2MarketType           types.String                              `tfsdk:"ec2_market_type"`
-	Ec2InstanceCapabilities FleetResourceEc2InstanceCapabilitiesModel `tfsdk:"ec2_instance_capabilities"`
+	Mode                    types.String                               `tfsdk:"mode"`
+	Ec2MarketType           types.String                               `tfsdk:"ec2_market_type"`
+	Ec2InstanceCapabilities *FleetResourceEc2InstanceCapabilitiesModel `tfsdk:"ec2_instance_capabilities"`
 }
 
 type FleetResourceEc2InstanceCapabilitiesModel struct {
-	CpuArchitecture         types.String                                                     `tfsdk:"cpu_architecture"`
-	MinCpuCount             types.Int32                                                      `tfsdk:"min_cpu_count"`
-	MaxCpuCount             types.Int32                                                      `tfsdk:"max_cpu_count"`
-	MemoryMib               types.Int32                                                      `tfsdk:"memory_mib"`
-	OsFamily                types.String                                                     `tfsdk:"os_family"`
-	AllowedInstanceType     types.List                                                       `tfsdk:"allowed_instance_types"`
-	ExcludeInstanceType     types.List                                                       `tfsdk:"exclude_instance_types"`
-	AcceleratorCapabilities FleetResourceEc2InstanceCapabilitiesAcceleratorCapabilitiesModel `tfsdk:"accelerator_capabilities"`
-	RootEBSVolume           FleetResourceEc2InstanceCapabilitiesRootEBSVolumeModel           `tfsdk:"root_ebs_volume"`
+	CpuArchitecture         types.String                                                      `tfsdk:"cpu_architecture"`
+	MinCpuCount             types.Int32                                                       `tfsdk:"min_cpu_count"`
+	MaxCpuCount             types.Int32                                                       `tfsdk:"max_cpu_count"`
+	MemoryMib               types.Int32                                                       `tfsdk:"memory_mib"`
+	OsFamily                types.String                                                      `tfsdk:"os_family"`
+	AllowedInstanceType     types.List                                                        `tfsdk:"allowed_instance_types"`
+	ExcludeInstanceType     types.List                                                        `tfsdk:"exclude_instance_types"`
+	AcceleratorCapabilities *FleetResourceEc2InstanceCapabilitiesAcceleratorCapabilitiesModel `tfsdk:"accelerator_capabilities"`
+	RootEBSVolume           *FleetResourceEc2InstanceCapabilitiesRootEBSVolumeModel           `tfsdk:"root_ebs_volume"`
 }
 
 type FleetResourceEc2InstanceCapabilitiesRootEBSVolumeModel struct {
@@ -59,14 +59,14 @@ type FleetResourceEc2InstanceCapabilitiesAcceleratorCapabilitiesModel struct {
 
 // FleetResourceModel describes the resource data model.
 type FleetResourceModel struct {
-	DisplayName    types.String                    `tfsdk:"display_name"`
-	Description    types.String                    `tfsdk:"description"`
-	FarmId         types.String                    `tfsdk:"farm_id"`
-	MinWorkerCount types.Int32                     `tfsdk:"min_worker_count"`
-	MaxWorkerCount types.Int32                     `tfsdk:"max_worker_count"`
-	RoleArn        types.String                    `tfsdk:"role_arn"`
-	ID             types.String                    `tfsdk:"id"`
-	Configuration  FleetResourceConfigurationModel `tfsdk:"configuration"`
+	DisplayName    types.String                     `tfsdk:"display_name"`
+	Description    types.String                     `tfsdk:"description"`
+	FarmId         types.String                     `tfsdk:"farm_id"`
+	MinWorkerCount types.Int32                      `tfsdk:"min_worker_count"`
+	MaxWorkerCount types.Int32                      `tfsdk:"max_worker_count"`
+	RoleArn        types.String                     `tfsdk:"role_arn"`
+	ID             types.String                     `tfsdk:"id"`
+	Configuration  *FleetResourceConfigurationModel `tfsdk:"configuration"`
 }
 
 func (r *FleetResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
