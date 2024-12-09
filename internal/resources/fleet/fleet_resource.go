@@ -276,7 +276,7 @@ func (r *FleetResource) Create(ctx context.Context, req resource.CreateRequest, 
 			}
 		}
 	} else {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Configuration is required"))
+		resp.Diagnostics.AddError("Client Error", "Configuration is required")
 		return
 	}
 	createRequest := deadline.CreateFleetInput{
