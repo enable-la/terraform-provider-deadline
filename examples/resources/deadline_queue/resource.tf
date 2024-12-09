@@ -3,20 +3,12 @@ resource "deadline_farm" "test" {
   description  = "this is a test farm"
 }
 
-resource "deadline_fleet" "test" {
-  display_name = "test"
+resource "deadline_queue" "test" {
   farm_id      = deadline_farm.test.id
-  description  = "this is a test farm"
+  display_name = "test queue"
+  description  = "This is a test queue"
 }
 
-resource "deadline_associate_member_to_fleet" "test" {
-  farm_id           = deadline_farm.test.id
-  fleet_id          = deadline_fleet.test.id
-  member_id         = "test"
-  identity_store_id = "example_identity_store"
-  membership_level  = "VIEWER"
-  principal_type    = "USER"
-}
 resource "deadline_fleet" "test" {
   farm_id          = deadline_farm.test.id
   display_name     = "test"

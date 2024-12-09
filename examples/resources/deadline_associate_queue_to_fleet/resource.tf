@@ -9,14 +9,19 @@ resource "deadline_fleet" "test" {
   description  = "this is a test farm"
 }
 
-resource "deadline_associate_member_to_fleet" "test" {
-  farm_id           = deadline_farm.test.id
-  fleet_id          = deadline_fleet.test.id
-  member_id         = "test"
-  identity_store_id = "example_identity_store"
-  membership_level  = "VIEWER"
-  principal_type    = "USER"
+resource "deadline_associate_queue_to_fleet" "test" {
+  farm_id  = deadline_farm.test.id
+  fleet_id = deadline_fleet.test.id
+  queue_id = deadline_queue.test.id
 }
+
+resource "deadline_queue" "test" {
+  farm_id      = deadline_farm.test.id
+  display_name = "test queue"
+  description  = "This is a test queue"
+}
+
+
 resource "deadline_fleet" "test" {
   farm_id          = deadline_farm.test.id
   display_name     = "test"
@@ -25,7 +30,8 @@ resource "deadline_fleet" "test" {
   min_worker_count = 0
   max_worker_count = 1
   configuration {
-    mode = "aws_managed"
+    mode            = "aws_managed"
+    ec2_market_type = "spot"
     ec2_instance_capabilities {
       cpu_architecture = "x86_64"
       min_cpu_count    = 1
