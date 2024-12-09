@@ -18,10 +18,32 @@ resource "deadline_farm" "test" {
   description  = "this is a test farm"
 }
 
+
 resource "deadline_fleet" "test" {
-  display_name = "test"
-  farm_id      = deadline_farm.test.id
-  description  = "this is a test farm"
+  farm_id          = deadline_farm.test.id
+  display_name     = "test"
+  description      = "This is a test fleet"
+  role_arn         = "arn:aws:iam::123456789012:role/DeadlineWorkerRole"
+  min_worker_count = 0
+  max_worker_count = 1
+  configuration {
+    mode            = "aws_managed"
+    ec2_market_type = "spot"
+    ec2_instance_capabilities {
+      cpu_architecture = "x86_64"
+      min_cpu_count    = 1
+      max_cpu_count    = 2
+      memory_mib_range {
+        min = 1024
+        max = 1024 * 4
+      }
+      os_family = "LINUX" // LINUX, WINDOWS
+      root_ebs_volume {
+        iops = 100
+        size = 100
+      }
+    }
+  }
 }
 ```
 
@@ -48,31 +70,25 @@ resource "deadline_fleet" "test" {
 <a id="nestedblock--configuration"></a>
 ### Nested Schema for `configuration`
 
-Required:
-
-- `mode` (String) The mode of the fleet configuration. It can either be 'aws_managed' or 'customer_managed'.
-
 Optional:
 
 - `ec2_instance_capabilities` (Block, Optional) The capabilities of the EC2 instance. Only required when the mode is 'aws_managed'. (see [below for nested schema](#nestedblock--configuration--ec2_instance_capabilities))
 - `ec2_market_type` (String) The market type of the EC2 instance. It can either be 'spot' or 'on-demand'. Only required when the mode is 'aws_managed'.
+- `mode` (String) The mode of the fleet configuration. It can either be 'aws_managed' or 'customer_managed'.
 
 <a id="nestedblock--configuration--ec2_instance_capabilities"></a>
 ### Nested Schema for `configuration.ec2_instance_capabilities`
-
-Required:
-
-- `cpu_architecture` (String)
-- `max_cpu_count` (Number)
-- `memory_mib` (Number)
-- `min_cpu_count` (Number)
-- `os_family` (String)
 
 Optional:
 
 - `accelerator_capabilities` (Block, Optional) (see [below for nested schema](#nestedblock--configuration--ec2_instance_capabilities--accelerator_capabilities))
 - `allowed_instance_types` (List of String)
+- `cpu_architecture` (String)
 - `exclude_instance_types` (List of String)
+- `max_cpu_count` (Number)
+- `memory_mib_range` (Block, Optional) (see [below for nested schema](#nestedblock--configuration--ec2_instance_capabilities--memory_mib_range))
+- `min_cpu_count` (Number)
+- `os_family` (String)
 - `root_ebs_volume` (Block, Optional) (see [below for nested schema](#nestedblock--configuration--ec2_instance_capabilities--root_ebs_volume))
 
 <a id="nestedblock--configuration--ec2_instance_capabilities--accelerator_capabilities"></a>
@@ -94,6 +110,15 @@ Optional:
 
 - `runtime` (String)
 
+
+
+<a id="nestedblock--configuration--ec2_instance_capabilities--memory_mib_range"></a>
+### Nested Schema for `configuration.ec2_instance_capabilities.memory_mib_range`
+
+Optional:
+
+- `max` (Number) The number of IOPS for the root EBS volume. Only required when the mode is 'aws_managed'.
+- `min` (Number) The size of the root EBS volume in GiB.
 
 
 <a id="nestedblock--configuration--ec2_instance_capabilities--root_ebs_volume"></a>

@@ -33,12 +33,15 @@ type FleetResourceConfigurationModel struct {
 	Ec2MarketType           types.String                               `tfsdk:"ec2_market_type"`
 	Ec2InstanceCapabilities *FleetResourceEc2InstanceCapabilitiesModel `tfsdk:"ec2_instance_capabilities"`
 }
-
+type FleetResourceEc2InstanceCapabilitiesMemoryRangeeeModel struct {
+	Min types.Int32 `tfsdk:"min"`
+	Max types.Int32 `tfsdk:"max"`
+}
 type FleetResourceEc2InstanceCapabilitiesModel struct {
 	CpuArchitecture         types.String                                                      `tfsdk:"cpu_architecture"`
 	MinCpuCount             types.Int32                                                       `tfsdk:"min_cpu_count"`
 	MaxCpuCount             types.Int32                                                       `tfsdk:"max_cpu_count"`
-	MemoryMib               types.Int32                                                       `tfsdk:"memory_mib"`
+	MemoryMibRange          *FleetResourceEc2InstanceCapabilitiesMemoryRangeeeModel           `tfsdk:"memory_mib_range"`
 	OsFamily                types.String                                                      `tfsdk:"os_family"`
 	AllowedInstanceType     types.List                                                        `tfsdk:"allowed_instance_types"`
 	ExcludeInstanceType     types.List                                                        `tfsdk:"exclude_instance_types"`
@@ -101,6 +104,18 @@ func (r *FleetResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 									},
 								},
 							},
+							"memory_mib_range": schema.SingleNestedBlock{
+								Attributes: map[string]schema.Attribute{
+									"max": schema.Int32Attribute{
+										Optional:    true,
+										Description: "The number of IOPS for the root EBS volume. Only required when the mode is 'aws_managed'.",
+									},
+									"min": schema.Int32Attribute{
+										Optional:    true,
+										Description: "The size of the root EBS volume in GiB.",
+									},
+								},
+							},
 							"root_ebs_volume": schema.SingleNestedBlock{
 								Attributes: map[string]schema.Attribute{
 									"iops": schema.Int32Attribute{
@@ -120,15 +135,13 @@ func (r *FleetResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 						},
 						Attributes: map[string]schema.Attribute{
 							"cpu_architecture": schema.StringAttribute{
-								Required: true,
+								Optional: true,
 							},
-							"min_cpu_count": schema.Int32Attribute{Required: true},
-							"max_cpu_count": schema.Int32Attribute{Required: true},
-							"memory_mib": schema.Int32Attribute{
-								Required: true,
-							},
+							"min_cpu_count": schema.Int32Attribute{Optional: true},
+							"max_cpu_count": schema.Int32Attribute{Optional: true},
+
 							"os_family": schema.StringAttribute{
-								Required: true,
+								Optional: true,
 							},
 							"allowed_instance_types": schema.ListAttribute{
 								ElementType: types.StringType,
@@ -143,7 +156,7 @@ func (r *FleetResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				},
 				Attributes: map[string]schema.Attribute{
 					"mode": schema.StringAttribute{
-						Required:    true,
+						Optional:    true,
 						Description: "The mode of the fleet configuration. It can either be 'aws_managed' or 'customer_managed'.",
 					},
 					"ec2_market_type": schema.StringAttribute{
@@ -217,30 +230,54 @@ func (r *FleetResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	var configurationType dltypes.FleetConfiguration
-	if data.Configuration.Mode.ValueString() == "customer_managed" {
-		configurationType = &dltypes.FleetConfigurationMemberCustomerManaged{
-			Value: dltypes.CustomerManagedFleetConfiguration{
-				Mode: dltypes.AutoScalingModeEventBasedAutoScaling,
-			},
-		}
-	} else {
-		archType := dltypes.CpuArchitectureTypeX8664
-		archTypeSelector := dltypes.CpuArchitectureType(data.Configuration.Ec2InstanceCapabilities.CpuArchitecture.ValueString())
-		if archTypeSelector == "arm64" {
-			archType = dltypes.CpuArchitectureTypeArm64
-		}
-		configurationType = &dltypes.FleetConfigurationMemberServiceManagedEc2{
-			Value: dltypes.ServiceManagedEc2FleetConfiguration{
-				InstanceCapabilities: &dltypes.ServiceManagedEc2InstanceCapabilities{
-					CpuArchitectureType: archType,
-					VCpuCount: &dltypes.VCpuCountRange{
-						Min: data.Configuration.Ec2InstanceCapabilities.MinCpuCount.ValueInt32Pointer(),
-						Max: data.Configuration.Ec2InstanceCapabilities.MaxCpuCount.ValueInt32Pointer(),
+	if data.Configuration != nil {
+		if data.Configuration.Mode.ValueString() == "customer_managed" {
+			configurationType = &dltypes.FleetConfigurationMemberCustomerManaged{
+				Value: dltypes.CustomerManagedFleetConfiguration{
+					Mode: dltypes.AutoScalingModeEventBasedAutoScaling,
+				},
+			}
+		} else {
+			archType := dltypes.CpuArchitectureTypeX8664
+			archTypeSelector := dltypes.CpuArchitectureType(data.Configuration.Ec2InstanceCapabilities.CpuArchitecture.ValueString())
+			if archTypeSelector == "arm64" {
+				archType = dltypes.CpuArchitectureTypeArm64
+			}
+			osFamily := dltypes.ServiceManagedFleetOperatingSystemFamilyWindows
+			if data.Configuration.Ec2InstanceCapabilities.OsFamily.ValueString() == "linux" {
+				osFamily = dltypes.ServiceManagedFleetOperatingSystemFamilyLinux
+			} else if data.Configuration.Ec2InstanceCapabilities.OsFamily.ValueString() == "windows" {
+				osFamily = dltypes.ServiceManagedFleetOperatingSystemFamilyWindows
+			}
+			marketType := dltypes.Ec2MarketTypeOnDemand
+			if data.Configuration.Ec2MarketType.ValueString() == "spot" {
+				marketType = dltypes.Ec2MarketTypeSpot
+			} else if data.Configuration.Ec2MarketType.ValueString() == "on-demand" {
+				marketType = dltypes.Ec2MarketTypeOnDemand
+			}
+			configurationType = &dltypes.FleetConfigurationMemberServiceManagedEc2{
+				Value: dltypes.ServiceManagedEc2FleetConfiguration{
+					InstanceCapabilities: &dltypes.ServiceManagedEc2InstanceCapabilities{
+						CpuArchitectureType: archType,
+						OsFamily:            osFamily,
+						MemoryMiB: &dltypes.MemoryMiBRange{
+							Min: data.Configuration.Ec2InstanceCapabilities.MemoryMibRange.Min.ValueInt32Pointer(),
+							Max: data.Configuration.Ec2InstanceCapabilities.MemoryMibRange.Max.ValueInt32Pointer(),
+						},
+						VCpuCount: &dltypes.VCpuCountRange{
+							Min: data.Configuration.Ec2InstanceCapabilities.MinCpuCount.ValueInt32Pointer(),
+							Max: data.Configuration.Ec2InstanceCapabilities.MaxCpuCount.ValueInt32Pointer(),
+						},
+					},
+					InstanceMarketOptions: &dltypes.ServiceManagedEc2InstanceMarketOptions{
+						Type: marketType,
 					},
 				},
-				InstanceMarketOptions: &dltypes.ServiceManagedEc2InstanceMarketOptions{},
-			},
+			}
 		}
+	} else {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Configuration is required"))
+		return
 	}
 	createRequest := deadline.CreateFleetInput{
 		FarmId:         data.FarmId.ValueStringPointer(),
@@ -273,10 +310,14 @@ func (r *FleetResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 	getResponse, err := r.client.GetFleet(ctx, &deadline.GetFleetInput{
 		FleetId: data.ID.ValueStringPointer(),
+		FarmId:  data.FarmId.ValueStringPointer(),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read %s, got error: %s", r.typeName(), err))
 		return
+	}
+	data.Configuration = &FleetResourceConfigurationModel{
+		Mode: types.StringValue("service_managed"),
 	}
 	data.Description = types.StringValue(*getResponse.Description)
 	data.DisplayName = types.StringValue(*getResponse.DisplayName)
@@ -298,6 +339,7 @@ func (r *FleetResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 	request := &deadline.UpdateFleetInput{
 		FarmId:      data.FarmId.ValueStringPointer(),
+		FleetId:     data.ID.ValueStringPointer(),
 		Description: data.Description.ValueStringPointer(),
 		DisplayName: data.DisplayName.ValueStringPointer(),
 	}

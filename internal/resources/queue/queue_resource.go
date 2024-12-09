@@ -83,7 +83,7 @@ type QueueResourceModel struct {
 	JobAttachmentSettings           *QueueResourceJobAttachmentSettingsModel `tfsdk:"job_attachment_settings"`
 	JobRunAsUser                    *QueueResourceJobRunAsUserModel          `tfsdk:"job_run_as_user"`
 	RequiredFileSystemLocationNames []types.String                           `tfsdk:"required_file_system_location_names"`
-	Tags                            map[string]types.String                  `tfsdk:"tags"`
+	Tags                            *types.MapType                           `tfsdk:"tags"`
 }
 
 func (r *QueueResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -169,11 +169,13 @@ func (r *QueueResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				MarkdownDescription: "The file system location name to include in the queue.",
 			},
 			"role_arn": schema.StringAttribute{
-				Required:            true,
+				Optional:            true,
 				MarkdownDescription: "The IAM role ARN that workers will use while running jobs for this queue.",
 			},
 			"tags": schema.MapAttribute{
-				ElementType:         types.MapType{},
+				ElementType: types.MapType{
+					ElemType: types.StringType,
+				},
 				Optional:            true,
 				MarkdownDescription: "The tags to apply to the queue.",
 			},
@@ -227,38 +229,42 @@ func (r *QueueResource) Create(ctx context.Context, req resource.CreateRequest, 
 		}
 		createRequest.AllowedStorageProfileIds = allowedStorageProfileIds
 	}
-	if data.JobAttachmentSettings.RootPrefix.ValueStringPointer() != nil && data.JobAttachmentSettings.S3BucketName.ValueStringPointer() != nil {
-		if data.JobAttachmentSettings.RootPrefix.ValueString() == "" || data.JobAttachmentSettings.S3BucketName.ValueString() == "" {
-			createRequest.JobAttachmentSettings = &dltypes.JobAttachmentSettings{
-				RootPrefix:   data.JobAttachmentSettings.RootPrefix.ValueStringPointer(),
-				S3BucketName: data.JobAttachmentSettings.S3BucketName.ValueStringPointer(),
+	if data.JobAttachmentSettings != nil {
+		if data.JobAttachmentSettings.RootPrefix.ValueStringPointer() != nil && data.JobAttachmentSettings.S3BucketName.ValueStringPointer() != nil {
+			if data.JobAttachmentSettings.RootPrefix.ValueString() == "" || data.JobAttachmentSettings.S3BucketName.ValueString() == "" {
+				createRequest.JobAttachmentSettings = &dltypes.JobAttachmentSettings{
+					RootPrefix:   data.JobAttachmentSettings.RootPrefix.ValueStringPointer(),
+					S3BucketName: data.JobAttachmentSettings.S3BucketName.ValueStringPointer(),
+				}
 			}
 		}
 	}
-	if data.JobRunAsUser.PosixUser.User.ValueString() != "" {
-		createRequest.JobRunAsUser = &dltypes.JobRunAsUser{
-			Posix: &dltypes.PosixUser{
-				Group: data.JobRunAsUser.PosixUser.Group.ValueStringPointer(),
-				User:  data.JobRunAsUser.PosixUser.User.ValueStringPointer(),
-			},
+	if data.JobRunAsUser != nil {
+		if data.JobRunAsUser.PosixUser.User.ValueString() != "" {
+			createRequest.JobRunAsUser = &dltypes.JobRunAsUser{
+				Posix: &dltypes.PosixUser{
+					Group: data.JobRunAsUser.PosixUser.Group.ValueStringPointer(),
+					User:  data.JobRunAsUser.PosixUser.User.ValueStringPointer(),
+				},
+			}
 		}
-	}
-	if data.JobRunAsUser.WindowsUser.User.ValueString() != "" {
-		createRequest.JobRunAsUser = &dltypes.JobRunAsUser{
-			Windows: &dltypes.WindowsUser{
-				PasswordArn: data.JobRunAsUser.WindowsUser.PasswordArn.ValueStringPointer(),
-				User:        data.JobRunAsUser.WindowsUser.User.ValueStringPointer(),
-			},
+		if data.JobRunAsUser.WindowsUser.User.ValueString() != "" {
+			createRequest.JobRunAsUser = &dltypes.JobRunAsUser{
+				Windows: &dltypes.WindowsUser{
+					PasswordArn: data.JobRunAsUser.WindowsUser.PasswordArn.ValueStringPointer(),
+					User:        data.JobRunAsUser.WindowsUser.User.ValueStringPointer(),
+				},
+			}
 		}
-	}
-	if data.JobRunAsUser.RunAs.ValueString() != "" {
-		if data.JobRunAsUser.RunAs.ValueString() == "QUEUE_CONFIGURED_USER" {
-			createRequest.JobRunAsUser.RunAs = dltypes.RunAsQueueConfiguredUser
-		} else if data.JobRunAsUser.RunAs.ValueString() == "WORKER_AGENT_USER" {
-			createRequest.JobRunAsUser.RunAs = dltypes.RunAsWorkerAgentUser
-		} else {
-			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Invalid value for run_as, got %s", data.JobRunAsUser.RunAs.ValueString()))
-			return
+		if data.JobRunAsUser.RunAs.ValueString() != "" {
+			if data.JobRunAsUser.RunAs.ValueString() == "QUEUE_CONFIGURED_USER" {
+				createRequest.JobRunAsUser.RunAs = dltypes.RunAsQueueConfiguredUser
+			} else if data.JobRunAsUser.RunAs.ValueString() == "WORKER_AGENT_USER" {
+				createRequest.JobRunAsUser.RunAs = dltypes.RunAsWorkerAgentUser
+			} else {
+				resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Invalid value for run_as, got %s", data.JobRunAsUser.RunAs.ValueString()))
+				return
+			}
 		}
 	}
 	createOutput, err := r.client.CreateQueue(ctx, createRequest)
@@ -283,6 +289,7 @@ func (r *QueueResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 	getResponse, err := r.client.GetQueue(ctx, &deadline.GetQueueInput{
 		QueueId: data.ID.ValueStringPointer(),
+		FarmId:  data.FarmId.ValueStringPointer(),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read %s, got error: %s", r.typeName(), err))
@@ -291,10 +298,14 @@ func (r *QueueResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	data.Description = types.StringValue(*getResponse.Description)
 	data.DisplayName = types.StringValue(*getResponse.DisplayName)
 	data.FarmId = types.StringValue(*getResponse.FarmId)
-	data.RoleArn = types.StringValue(*getResponse.RoleArn)
-	data.JobAttachmentSettings.RootPrefix = types.StringValue(*getResponse.JobAttachmentSettings.RootPrefix)
-	data.JobAttachmentSettings.S3BucketName = types.StringValue(*getResponse.JobAttachmentSettings.S3BucketName)
+	if getResponse.AllowedStorageProfileIds != nil {
+		data.RoleArn = types.StringValue(*getResponse.RoleArn)
+	}
+	if getResponse.JobAttachmentSettings != nil {
 
+		data.JobAttachmentSettings.RootPrefix = types.StringValue(*getResponse.JobAttachmentSettings.RootPrefix)
+		data.JobAttachmentSettings.S3BucketName = types.StringValue(*getResponse.JobAttachmentSettings.S3BucketName)
+	}
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -376,6 +387,7 @@ func (r *QueueResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	}
 	deleteResourceRequest := &deadline.DeleteQueueInput{
 		QueueId: data.ID.ValueStringPointer(),
+		FarmId:  data.FarmId.ValueStringPointer(),
 	}
 	_, err := r.client.DeleteQueue(ctx, deleteResourceRequest)
 	if err != nil {

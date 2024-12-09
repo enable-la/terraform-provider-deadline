@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/deadline"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-member-to-farm"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-member-to-fleet"
+	associate_queue_to_fleet "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-queue-to-fleet"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/farm"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/fleet"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/queue"
@@ -71,6 +72,7 @@ func (p *AWSDeadlineProvider) Resources(ctx context.Context) []func() resource.R
 		queue.NewQueueResource,
 		associate_member_to_fleet.NewAssociateMemberToFleetResource,
 		associate_member_to_farm.NewAssociateMemberToFarmResource,
+		associate_queue_to_fleet.NewAssociateQueueToFleetResource,
 	}
 }
 
