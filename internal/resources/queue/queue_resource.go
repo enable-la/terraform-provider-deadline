@@ -19,7 +19,7 @@ import (
 var _ resource.Resource = &QueueResource{}
 var _ resource.ResourceWithImportState = &QueueResource{}
 
-func NewQueueResource() resource.Resource {
+func New() resource.Resource {
 	return &QueueResource{}
 }
 

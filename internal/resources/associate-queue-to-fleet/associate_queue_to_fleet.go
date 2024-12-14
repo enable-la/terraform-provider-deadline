@@ -20,7 +20,7 @@ import (
 var _ resource.Resource = &AssociateQueueToFleetResource{}
 var _ resource.ResourceWithImportState = &AssociateQueueToFleetResource{}
 
-func NewAssociateQueueToFleetResource() resource.Resource {
+func New() resource.Resource {
 	return &AssociateQueueToFleetResource{}
 }
 

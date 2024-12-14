@@ -79,14 +79,14 @@ func (p *AWSDeadlineProvider) Configure(ctx context.Context, req provider.Config
 
 func (p *AWSDeadlineProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		farm.NewFarmResource,
-		fleet.NewFleetResource,
-		queue.NewQueueResource,
-		queueenvironment.NewQueueEnvironmentResource,
-		associatemembertofleet.NewAssociateMemberToFleetResource,
-		associatemembertofarm.NewAssociateMemberToFarmResource,
-		associatequeuetofleet.NewAssociateQueueToFleetResource,
-		storageprofile.NewStorageProfileResource,
+		farm.New,
+		fleet.New,
+		queue.New,
+		queueenvironment.New,
+		associatemembertofleet.New,
+		associatemembertofarm.New,
+		associatequeuetofleet.New,
+		storageprofile.New,
 	}
 }
 

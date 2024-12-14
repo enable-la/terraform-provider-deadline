@@ -19,7 +19,7 @@ import (
 var _ resource.Resource = &FleetResource{}
 var _ resource.ResourceWithImportState = &FleetResource{}
 
-func NewFleetResource() resource.Resource {
+func New() resource.Resource {
 	return &FleetResource{}
 }
 

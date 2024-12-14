@@ -20,7 +20,7 @@ import (
 var _ resource.Resource = &StorageProfileResource{}
 var _ resource.ResourceWithImportState = &StorageProfileResource{}
 
-func NewStorageProfileResource() resource.Resource {
+func New() resource.Resource {
 	return &StorageProfileResource{}
 }
 
