@@ -43,8 +43,8 @@ type FleetResourceEc2InstanceCapabilitiesModel struct {
 	MaxCpuCount             types.Int32                                                       `tfsdk:"max_cpu_count"`
 	MemoryMibRange          *FleetResourceEc2InstanceCapabilitiesMemoryRangeeeModel           `tfsdk:"memory_mib_range"`
 	OsFamily                types.String                                                      `tfsdk:"os_family"`
-	AllowedInstanceType     types.List                                                        `tfsdk:"allowed_instance_types"`
-	ExcludeInstanceType     types.List                                                        `tfsdk:"exclude_instance_types"`
+	AllowedInstanceType     []types.String                                                    `tfsdk:"allowed_instance_types"`
+	ExcludeInstanceType     types.ListType                                                    `tfsdk:"exclude_instance_types"`
 	AcceleratorCapabilities *FleetResourceEc2InstanceCapabilitiesAcceleratorCapabilitiesModel `tfsdk:"accelerator_capabilities"`
 	RootEBSVolume           *FleetResourceEc2InstanceCapabilitiesRootEBSVolumeModel           `tfsdk:"root_ebs_volume"`
 }
@@ -255,24 +255,38 @@ func (r *FleetResource) Create(ctx context.Context, req resource.CreateRequest, 
 			} else if data.Configuration.Ec2MarketType.ValueString() == "on-demand" {
 				marketType = dltypes.Ec2MarketTypeOnDemand
 			}
+			var aInstances []string
+			if data.Configuration.Ec2InstanceCapabilities.AllowedInstanceType != nil {
+				allowedInstances := data.Configuration.Ec2InstanceCapabilities.AllowedInstanceType
+				if len(allowedInstances) > 0 {
+					for _, aInstance := range allowedInstances {
+						aInstances = append(aInstances, aInstance.ValueString())
+					}
+				}
+			}
+			iC := &dltypes.ServiceManagedEc2InstanceCapabilities{
+				CpuArchitectureType:  archType,
+				OsFamily:             osFamily,
+				AllowedInstanceTypes: aInstances,
+				MemoryMiB: &dltypes.MemoryMiBRange{
+					Min: data.Configuration.Ec2InstanceCapabilities.MemoryMibRange.Min.ValueInt32Pointer(),
+					Max: data.Configuration.Ec2InstanceCapabilities.MemoryMibRange.Max.ValueInt32Pointer(),
+				},
+				VCpuCount: &dltypes.VCpuCountRange{
+					Min: data.Configuration.Ec2InstanceCapabilities.MinCpuCount.ValueInt32Pointer(),
+					Max: data.Configuration.Ec2InstanceCapabilities.MaxCpuCount.ValueInt32Pointer(),
+				},
+			}
 			configurationType = &dltypes.FleetConfigurationMemberServiceManagedEc2{
 				Value: dltypes.ServiceManagedEc2FleetConfiguration{
-					InstanceCapabilities: &dltypes.ServiceManagedEc2InstanceCapabilities{
-						CpuArchitectureType: archType,
-						OsFamily:            osFamily,
-						MemoryMiB: &dltypes.MemoryMiBRange{
-							Min: data.Configuration.Ec2InstanceCapabilities.MemoryMibRange.Min.ValueInt32Pointer(),
-							Max: data.Configuration.Ec2InstanceCapabilities.MemoryMibRange.Max.ValueInt32Pointer(),
-						},
-						VCpuCount: &dltypes.VCpuCountRange{
-							Min: data.Configuration.Ec2InstanceCapabilities.MinCpuCount.ValueInt32Pointer(),
-							Max: data.Configuration.Ec2InstanceCapabilities.MaxCpuCount.ValueInt32Pointer(),
-						},
-					},
+					InstanceCapabilities: iC,
 					InstanceMarketOptions: &dltypes.ServiceManagedEc2InstanceMarketOptions{
 						Type: marketType,
 					},
 				},
+			}
+			if len(aInstances) > 0 {
+				iC.AllowedInstanceTypes = aInstances
 			}
 		}
 	} else {

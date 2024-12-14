@@ -12,6 +12,7 @@ import (
 	associatequeuetofleet "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-queue-to-fleet"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/farm"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/fleet"
+	licenseendpoint "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/license-endpoint"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/queue"
 	queueenvironment "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/queue-environment"
 	storageprofile "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/storage-profile"
@@ -87,6 +88,7 @@ func (p *AWSDeadlineProvider) Resources(ctx context.Context) []func() resource.R
 		associatemembertofarm.New,
 		associatequeuetofleet.New,
 		storageprofile.New,
+		licenseendpoint.New,
 	}
 }
 

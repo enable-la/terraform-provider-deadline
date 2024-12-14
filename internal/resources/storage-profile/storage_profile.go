@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -55,6 +57,9 @@ func (r *StorageProfileResource) Schema(ctx context.Context, req resource.Schema
 		Blocks: map[string]schema.Block{
 			"file_system_location": schema.ListNestedBlock{
 				NestedObject: schema.NestedBlockObject{
+					PlanModifiers: []planmodifier.Object{
+						objectplanmodifier.RequiresReplace(),
+					},
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
 							MarkdownDescription: "Name of the file system location",
@@ -215,10 +220,12 @@ func (r *StorageProfileResource) Update(ctx context.Context, req resource.Update
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	osFamily := determineOsProfile(data.OSFamily.String())
 	updateRequest := deadline.UpdateStorageProfileInput{
 		StorageProfileId: data.ID.ValueStringPointer(),
 		FarmId:           data.FarmId.ValueStringPointer(),
 		DisplayName:      data.DisplayName.ValueStringPointer(),
+		OsFamily:         osFamily,
 	}
 	_, err := r.client.UpdateStorageProfile(ctx, &updateRequest)
 	if err != nil {

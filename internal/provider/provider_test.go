@@ -52,6 +52,5 @@ resource "deadline_farm" "test" {
 	display_name = %[1]q
     description  =  %[2]q
 }
-
 `, displayName, description, roleARN)
 }
