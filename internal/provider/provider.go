@@ -7,12 +7,14 @@ import (
 	"context"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/deadline"
-	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-member-to-farm"
-	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-member-to-fleet"
-	associate_queue_to_fleet "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-queue-to-fleet"
+	associatemembertofarm "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-member-to-farm"
+	associatemembertofleet "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-member-to-fleet"
+	associatequeuetofleet "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-queue-to-fleet"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/farm"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/fleet"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/queue"
+	queueenvironment "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/queue-environment"
+	storageprofile "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/storage-profile"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -80,9 +82,11 @@ func (p *AWSDeadlineProvider) Resources(ctx context.Context) []func() resource.R
 		farm.NewFarmResource,
 		fleet.NewFleetResource,
 		queue.NewQueueResource,
-		associate_member_to_fleet.NewAssociateMemberToFleetResource,
-		associate_member_to_farm.NewAssociateMemberToFarmResource,
-		associate_queue_to_fleet.NewAssociateQueueToFleetResource,
+		queueenvironment.NewQueueEnvironmentResource,
+		associatemembertofleet.NewAssociateMemberToFleetResource,
+		associatemembertofarm.NewAssociateMemberToFarmResource,
+		associatequeuetofleet.NewAssociateQueueToFleetResource,
+		storageprofile.NewStorageProfileResource,
 	}
 }
 
