@@ -157,10 +157,8 @@ func (r *QueueEnvironmentResource) Update(ctx context.Context, req resource.Upda
 	switch data.TemplateType.ValueString() {
 	case "json":
 		templateType = dltypes.EnvironmentTemplateTypeJson
-		break
 	case "yaml":
 		templateType = dltypes.EnvironmentTemplateTypeYaml
-		break
 	}
 
 	updateRequest := deadline.UpdateQueueEnvironmentInput{

@@ -142,7 +142,7 @@ func (r *StorageProfileResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 	data.ID = types.StringValue(*storageprofileResponse.StorageProfileId)
 	if len(storageprofileResponse.OsFamily.Values()) > 0 {
-		data.OSFamily = types.StringValue(fmt.Sprintf("%s", storageprofileResponse.OsFamily.Values()[0]))
+		data.OSFamily = types.StringValue(fmt.Sprintf("%v", storageprofileResponse.OsFamily))
 	}
 	if storageprofileResponse.DisplayName != nil {
 		data.DisplayName = types.StringValue(*storageprofileResponse.DisplayName)
