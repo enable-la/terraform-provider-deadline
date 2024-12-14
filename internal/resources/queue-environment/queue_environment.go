@@ -62,7 +62,7 @@ func (r *QueueEnvironmentResource) Schema(ctx context.Context, req resource.Sche
 			},
 			"template": schema.StringAttribute{
 				Required:    true,
-				Description: "The environment template to use in the queue.",
+				Description: "The environment template to use in the queue. See examples here: https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/README.md",
 			},
 			"template_type": schema.StringAttribute{
 				Required:    true,
