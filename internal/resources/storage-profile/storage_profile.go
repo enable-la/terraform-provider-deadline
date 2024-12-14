@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/deadline"
 	dltypes "github.com/aws/aws-sdk-go-v2/service/deadline/types"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -28,22 +29,49 @@ type StorageProfileResource struct {
 	client *deadline.Client
 }
 
+type StorageProfileFileSystemLocations struct {
+	Name types.String `tfschema:"name"`
+	Path types.String `tfschema:"path"`
+	Type types.String `tfschema:"type"`
+}
+
 // StorageProfileResourceModel describes the resource data model.
 type StorageProfileResourceModel struct {
-	DisplayName types.String `tfsdk:"display_name"`
-	FarmId      types.String `tfsdk:"farm_id"`
-	OSFamily    types.String `tfsdk:"os_family"`
-	ID          types.String `tfsdk:"id"`
+	DisplayName         types.String                         `tfsdk:"display_name"`
+	FarmId              types.String                         `tfsdk:"farm_id"`
+	OSFamily            types.String                         `tfsdk:"os_family"`
+	ID                  types.String                         `tfsdk:"id"`
+	FileSystemLocations []*StorageProfileFileSystemLocations `tfsdk:"file_system_location"`
 }
 
 func (r *StorageProfileResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_storageprofile"
+	resp.TypeName = req.ProviderTypeName + "_storage_profile"
 }
 
 func (r *StorageProfileResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: "StorageProfile resource",
+		Blocks: map[string]schema.Block{
+			"file_system_location": schema.ListNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"name": schema.StringAttribute{
+							MarkdownDescription: "Name of the file system location",
+							Required:            true,
+						},
+						"path": schema.StringAttribute{
+							MarkdownDescription: "Path of the file system location",
+							Required:            true,
+						},
+						"type": schema.StringAttribute{
+							MarkdownDescription: "Type of the file system location. Can be either local, or shared",
+							Required:            true,
+						},
+					},
+				},
+			},
+		},
 		Attributes: map[string]schema.Attribute{
 			"display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the storage profile.",
@@ -57,6 +85,7 @@ func (r *StorageProfileResource) Schema(ctx context.Context, req resource.Schema
 				MarkdownDescription: "The OS family of the storage profile. Can be: windows, linux or macos",
 				Required:            true,
 			},
+
 			"id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The ID of the storage profile.",
@@ -98,6 +127,27 @@ func determineOsProfile(inputOS string) dltypes.StorageProfileOperatingSystemFam
 	return osFamily
 }
 
+func getFileSystemLocations(diags diag.Diagnostics, data StorageProfileResourceModel) []dltypes.FileSystemLocation {
+	var locations []dltypes.FileSystemLocation
+	if len(data.FileSystemLocations) > 0 {
+		for _, loc := range data.FileSystemLocations {
+			cl := dltypes.FileSystemLocation{}
+			switch cl.Type {
+			case "local":
+				cl.Type = dltypes.FileSystemLocationTypeLocal
+			case "shared":
+				cl.Type = dltypes.FileSystemLocationTypeShared
+			}
+			cl.Name = loc.Name.ValueStringPointer()
+			cl.Path = loc.Path.ValueStringPointer()
+			locations = append(locations, cl)
+		}
+	} else {
+		diags.AddError("Unable to determine file system locations", "There is no file system locations available please add one or more file system locations")
+	}
+	return locations
+}
+
 func (r *StorageProfileResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data StorageProfileResourceModel
 
@@ -108,10 +158,15 @@ func (r *StorageProfileResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 	osFamily := determineOsProfile(data.OSFamily.String())
+	fSystemLocations := getFileSystemLocations(resp.Diagnostics, data)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	storageprofileRequest := deadline.CreateStorageProfileInput{
-		DisplayName: data.DisplayName.ValueStringPointer(),
-		FarmId:      data.FarmId.ValueStringPointer(),
-		OsFamily:    osFamily,
+		DisplayName:         data.DisplayName.ValueStringPointer(),
+		FarmId:              data.FarmId.ValueStringPointer(),
+		OsFamily:            osFamily,
+		FileSystemLocations: fSystemLocations,
 	}
 	storageprofileOutput, err := r.client.CreateStorageProfile(ctx, &storageprofileRequest)
 	if err != nil {
