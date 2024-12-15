@@ -10,10 +10,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"strings"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -49,23 +48,14 @@ func (r *AssociateQueueToFleetResource) Schema(ctx context.Context, req resource
 			"queue_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the farm to associate the member to",
 				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"fleet_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the fleet to associate the member to",
 				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"farm_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the farm to associate the member to",
 				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -128,10 +118,40 @@ func (r *AssociateQueueToFleetResource) Read(ctx context.Context, req resource.R
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	idArray := strings.Split(data.ID.String(), "-")
+	farmID := data.FarmID.ValueStringPointer()
+	if farmID == nil {
+		farmID = &idArray[0]
+	}
+	fleetID := data.FleetID.ValueStringPointer()
+	if fleetID == nil {
+		fleetID = &idArray[1]
+	}
+	queueID := data.QueueID.ValueStringPointer()
+	if queueID == nil {
+		queueID = &idArray[2]
+	}
+
+	request := &deadline.GetQueueFleetAssociationInput{
+		FleetId: data.FleetID.ValueStringPointer(),
+		FarmId:  data.FarmID.ValueStringPointer(),
+		QueueId: data.QueueID.ValueStringPointer(),
+	}
+
+	_, err := r.client.GetQueueFleetAssociation(ctx, request)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to get Queue Fleet Association", "")
+	}
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	data.FarmID = types.StringValue(*farmID)
+	data.QueueID = types.StringValue(*queueID)
+	data.FleetID = types.StringValue(*fleetID)
+
+	data.ID = types.StringValue(fmt.Sprintf("%s-%s-%s", data.FarmID.ValueString(), data.FleetID.ValueString(), data.QueueID.ValueString()))
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -144,6 +164,18 @@ func (r *AssociateQueueToFleetResource) Update(ctx context.Context, req resource
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	request := &deadline.UpdateQueueFleetAssociationInput{
+		QueueId: data.QueueID.ValueStringPointer(),
+		FarmId:  data.FarmID.ValueStringPointer(),
+		FleetId: data.FleetID.ValueStringPointer(),
+	}
+	_, err := r.client.UpdateQueueFleetAssociation(ctx, request)
+
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to update queue fleet association", "")
+	}
+	data.ID = types.StringValue(fmt.Sprintf("%s-%s-%s", data.FarmID.ValueString(), data.FleetID.ValueString(), data.QueueID.ValueString()))
+
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
