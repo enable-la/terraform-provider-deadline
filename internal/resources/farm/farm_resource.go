@@ -18,7 +18,7 @@ import (
 var _ resource.Resource = &FarmResource{}
 var _ resource.ResourceWithImportState = &FarmResource{}
 
-func NewFarmResource() resource.Resource {
+func New() resource.Resource {
 	return &FarmResource{}
 }
 

@@ -7,12 +7,15 @@ import (
 	"context"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/deadline"
-	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-member-to-farm"
-	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-member-to-fleet"
-	associate_queue_to_fleet "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-queue-to-fleet"
+	associatemembertofarm "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-member-to-farm"
+	associatemembertofleet "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-member-to-fleet"
+	associatequeuetofleet "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/associate-queue-to-fleet"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/farm"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/fleet"
+	licenseendpoint "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/license-endpoint"
 	"github.com/enable-la/terraform-provider-aws-deadline/internal/resources/queue"
+	queueenvironment "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/queue-environment"
+	storageprofile "github.com/enable-la/terraform-provider-aws-deadline/internal/resources/storage-profile"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -77,12 +80,15 @@ func (p *AWSDeadlineProvider) Configure(ctx context.Context, req provider.Config
 
 func (p *AWSDeadlineProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		farm.NewFarmResource,
-		fleet.NewFleetResource,
-		queue.NewQueueResource,
-		associate_member_to_fleet.NewAssociateMemberToFleetResource,
-		associate_member_to_farm.NewAssociateMemberToFarmResource,
-		associate_queue_to_fleet.NewAssociateQueueToFleetResource,
+		farm.New,
+		fleet.New,
+		queue.New,
+		queueenvironment.New,
+		associatemembertofleet.New,
+		associatemembertofarm.New,
+		associatequeuetofleet.New,
+		storageprofile.New,
+		licenseendpoint.New,
 	}
 }
 
