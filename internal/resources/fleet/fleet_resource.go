@@ -44,7 +44,7 @@ type FleetResourceEc2InstanceCapabilitiesModel struct {
 	MemoryMibRange          *FleetResourceEc2InstanceCapabilitiesMemoryRangeeeModel           `tfsdk:"memory_mib_range"`
 	OsFamily                types.String                                                      `tfsdk:"os_family"`
 	AllowedInstanceType     []types.String                                                    `tfsdk:"allowed_instance_types"`
-	ExcludeInstanceType     types.ListType                                                    `tfsdk:"exclude_instance_types"`
+	ExcludeInstanceType     []types.String                                                    `tfsdk:"exclude_instance_types"`
 	AcceleratorCapabilities *FleetResourceEc2InstanceCapabilitiesAcceleratorCapabilitiesModel `tfsdk:"accelerator_capabilities"`
 	RootEBSVolume           *FleetResourceEc2InstanceCapabilitiesRootEBSVolumeModel           `tfsdk:"root_ebs_volume"`
 }
@@ -264,10 +264,20 @@ func (r *FleetResource) Create(ctx context.Context, req resource.CreateRequest, 
 					}
 				}
 			}
+			var eInstances []string
+			if data.Configuration.Ec2InstanceCapabilities.ExcludeInstanceType != nil {
+				excludedInstances := data.Configuration.Ec2InstanceCapabilities.ExcludeInstanceType
+				if len(excludedInstances) > 0 {
+					for _, aInstance := range excludedInstances {
+						eInstances = append(eInstances, aInstance.ValueString())
+					}
+				}
+			}
 			iC := &dltypes.ServiceManagedEc2InstanceCapabilities{
-				CpuArchitectureType:  archType,
-				OsFamily:             osFamily,
-				AllowedInstanceTypes: aInstances,
+				CpuArchitectureType:   archType,
+				OsFamily:              osFamily,
+				AllowedInstanceTypes:  aInstances,
+				ExcludedInstanceTypes: eInstances,
 				MemoryMiB: &dltypes.MemoryMiBRange{
 					Min: data.Configuration.Ec2InstanceCapabilities.MemoryMibRange.Min.ValueInt32Pointer(),
 					Max: data.Configuration.Ec2InstanceCapabilities.MemoryMibRange.Max.ValueInt32Pointer(),
