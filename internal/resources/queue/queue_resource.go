@@ -231,7 +231,7 @@ func (r *QueueResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 	if data.JobAttachmentSettings != nil {
 		if data.JobAttachmentSettings.RootPrefix.ValueStringPointer() != nil && data.JobAttachmentSettings.S3BucketName.ValueStringPointer() != nil {
-			if data.JobAttachmentSettings.RootPrefix.ValueString() == "" || data.JobAttachmentSettings.S3BucketName.ValueString() == "" {
+			if data.JobAttachmentSettings.RootPrefix.ValueString() != "" || data.JobAttachmentSettings.S3BucketName.ValueString() == "" {
 				createRequest.JobAttachmentSettings = &dltypes.JobAttachmentSettings{
 					RootPrefix:   data.JobAttachmentSettings.RootPrefix.ValueStringPointer(),
 					S3BucketName: data.JobAttachmentSettings.S3BucketName.ValueStringPointer(),
