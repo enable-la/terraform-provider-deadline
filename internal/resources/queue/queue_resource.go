@@ -230,13 +230,12 @@ func (r *QueueResource) Create(ctx context.Context, req resource.CreateRequest, 
 		createRequest.AllowedStorageProfileIds = allowedStorageProfileIds
 	}
 	if data.JobAttachmentSettings != nil {
-		if data.JobAttachmentSettings.RootPrefix.ValueStringPointer() != nil && data.JobAttachmentSettings.S3BucketName.ValueStringPointer() != nil {
-			if data.JobAttachmentSettings.RootPrefix.ValueString() != "" && data.JobAttachmentSettings.S3BucketName.ValueString() != "" {
-				createRequest.JobAttachmentSettings = &dltypes.JobAttachmentSettings{
-					RootPrefix:   data.JobAttachmentSettings.RootPrefix.ValueStringPointer(),
-					S3BucketName: data.JobAttachmentSettings.S3BucketName.ValueStringPointer(),
-				}
-			}
+		createRequest.JobAttachmentSettings = &dltypes.JobAttachmentSettings{}
+		if data.JobAttachmentSettings.RootPrefix.ValueStringPointer() != nil {
+			createRequest.JobAttachmentSettings.RootPrefix = data.JobAttachmentSettings.RootPrefix.ValueStringPointer()
+		}
+		if data.JobAttachmentSettings.S3BucketName.ValueStringPointer() != nil {
+			createRequest.JobAttachmentSettings.S3BucketName = data.JobAttachmentSettings.S3BucketName.ValueStringPointer()
 		}
 	}
 	if data.JobRunAsUser != nil {
