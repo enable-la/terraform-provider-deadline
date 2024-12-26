@@ -31,7 +31,7 @@ type QueueEnvironmentResource struct {
 // QueueEnvironmentResourceModel describes the resource data model.
 type QueueEnvironmentResourceModel struct {
 	QueueId      types.String `tfsdk:"queue_id"`
-	FarmId       types.String `tfsdk:"farm_id	"`
+	FarmId       types.String `tfsdk:"farm_id"`
 	Priority     types.Int32  `tfsdk:"priority"`
 	TemplateType types.String `tfsdk:"template_type"`
 	Template     types.String `tfsdk:"template"`
