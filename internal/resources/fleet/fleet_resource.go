@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/deadline"
 	dltypes "github.com/aws/aws-sdk-go-v2/service/deadline/types"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -220,16 +221,7 @@ func (r *FleetResource) Configure(ctx context.Context, req resource.ConfigureReq
 	r.client = client
 }
 
-func (r *FleetResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data FleetResourceModel
-
-	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
+func createFleetConfiguration(d diag.Diagnostics, data FleetResourceModel) dltypes.FleetConfiguration {
 	var configurationType dltypes.FleetConfiguration
 	if data.Configuration != nil {
 		if data.Configuration.Mode.ValueString() == "customer_managed" {
@@ -306,7 +298,18 @@ func (r *FleetResource) Create(ctx context.Context, req resource.CreateRequest, 
 			}
 		}
 	} else {
-		resp.Diagnostics.AddError("Client Error", "Configuration is required")
+		d.AddError("Client Error", "Configuration is required")
+	}
+	return configurationType
+}
+
+func (r *FleetResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data FleetResourceModel
+
+	// Read Terraform plan data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	configurationType := createFleetConfiguration(resp.Diagnostics, data)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 	createRequest := deadline.CreateFleetInput{
@@ -357,6 +360,7 @@ func (r *FleetResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
+	configurationType := createFleetConfiguration(resp.Diagnostics, data)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -365,32 +369,6 @@ func (r *FleetResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		FleetId:     data.ID.ValueStringPointer(),
 		Description: data.Description.ValueStringPointer(),
 		DisplayName: data.DisplayName.ValueStringPointer(),
-	}
-	var configurationType dltypes.FleetConfiguration
-	if data.Configuration.Mode.ValueString() == "customer_managed" {
-		configurationType = &dltypes.FleetConfigurationMemberCustomerManaged{
-			Value: dltypes.CustomerManagedFleetConfiguration{
-				Mode: dltypes.AutoScalingModeEventBasedAutoScaling,
-			},
-		}
-	} else {
-		archType := dltypes.CpuArchitectureTypeX8664
-		archTypeSelector := dltypes.CpuArchitectureType(data.Configuration.Ec2InstanceCapabilities.CpuArchitecture.ValueString())
-		if archTypeSelector == "arm64" {
-			archType = dltypes.CpuArchitectureTypeArm64
-		}
-		configurationType = &dltypes.FleetConfigurationMemberServiceManagedEc2{
-			Value: dltypes.ServiceManagedEc2FleetConfiguration{
-				InstanceCapabilities: &dltypes.ServiceManagedEc2InstanceCapabilities{
-					CpuArchitectureType: archType,
-					VCpuCount: &dltypes.VCpuCountRange{
-						Min: data.Configuration.Ec2InstanceCapabilities.MinCpuCount.ValueInt32Pointer(),
-						Max: data.Configuration.Ec2InstanceCapabilities.MaxCpuCount.ValueInt32Pointer(),
-					},
-				},
-				InstanceMarketOptions: &dltypes.ServiceManagedEc2InstanceMarketOptions{},
-			},
-		}
 	}
 	request.Configuration = configurationType
 	_, err := r.client.UpdateFleet(ctx, request)
