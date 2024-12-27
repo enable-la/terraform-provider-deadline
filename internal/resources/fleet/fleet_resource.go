@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"strings"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -244,9 +245,10 @@ func (r *FleetResource) Create(ctx context.Context, req resource.CreateRequest, 
 				archType = dltypes.CpuArchitectureTypeArm64
 			}
 			osFamily := dltypes.ServiceManagedFleetOperatingSystemFamilyWindows
-			if data.Configuration.Ec2InstanceCapabilities.OsFamily.ValueString() == "linux" {
+			providedOSFamily := strings.Trim(strings.ToLower(data.Configuration.Ec2InstanceCapabilities.OsFamily.ValueString()), " ")
+			if providedOSFamily == "linux" {
 				osFamily = dltypes.ServiceManagedFleetOperatingSystemFamilyLinux
-			} else if data.Configuration.Ec2InstanceCapabilities.OsFamily.ValueString() == "windows" {
+			} else if providedOSFamily == "windows" {
 				osFamily = dltypes.ServiceManagedFleetOperatingSystemFamilyWindows
 			}
 			marketType := dltypes.Ec2MarketTypeOnDemand
@@ -274,10 +276,8 @@ func (r *FleetResource) Create(ctx context.Context, req resource.CreateRequest, 
 				}
 			}
 			iC := &dltypes.ServiceManagedEc2InstanceCapabilities{
-				CpuArchitectureType:   archType,
-				OsFamily:              osFamily,
-				AllowedInstanceTypes:  aInstances,
-				ExcludedInstanceTypes: eInstances,
+				CpuArchitectureType: archType,
+				OsFamily:            osFamily,
 				MemoryMiB: &dltypes.MemoryMiBRange{
 					Min: data.Configuration.Ec2InstanceCapabilities.MemoryMibRange.Min.ValueInt32Pointer(),
 					Max: data.Configuration.Ec2InstanceCapabilities.MemoryMibRange.Max.ValueInt32Pointer(),
@@ -286,6 +286,12 @@ func (r *FleetResource) Create(ctx context.Context, req resource.CreateRequest, 
 					Min: data.Configuration.Ec2InstanceCapabilities.MinCpuCount.ValueInt32Pointer(),
 					Max: data.Configuration.Ec2InstanceCapabilities.MaxCpuCount.ValueInt32Pointer(),
 				},
+			}
+			if len(aInstances) > 0 {
+				iC.AllowedInstanceTypes = aInstances
+			}
+			if len(eInstances) > 0 {
+				iC.ExcludedInstanceTypes = eInstances
 			}
 			configurationType = &dltypes.FleetConfigurationMemberServiceManagedEc2{
 				Value: dltypes.ServiceManagedEc2FleetConfiguration{
