@@ -239,20 +239,24 @@ func (r *QueueResource) Create(ctx context.Context, req resource.CreateRequest, 
 		}
 	}
 	if data.JobRunAsUser != nil {
-		if data.JobRunAsUser.PosixUser.User.ValueString() != "" {
-			createRequest.JobRunAsUser = &dltypes.JobRunAsUser{
-				Posix: &dltypes.PosixUser{
-					Group: data.JobRunAsUser.PosixUser.Group.ValueStringPointer(),
-					User:  data.JobRunAsUser.PosixUser.User.ValueStringPointer(),
-				},
+		if data.JobRunAsUser.PosixUser != nil {
+			if data.JobRunAsUser.PosixUser.User.ValueString() != "" {
+				createRequest.JobRunAsUser = &dltypes.JobRunAsUser{
+					Posix: &dltypes.PosixUser{
+						Group: data.JobRunAsUser.PosixUser.Group.ValueStringPointer(),
+						User:  data.JobRunAsUser.PosixUser.User.ValueStringPointer(),
+					},
+				}
 			}
 		}
-		if data.JobRunAsUser.WindowsUser.User.ValueString() != "" {
-			createRequest.JobRunAsUser = &dltypes.JobRunAsUser{
-				Windows: &dltypes.WindowsUser{
-					PasswordArn: data.JobRunAsUser.WindowsUser.PasswordArn.ValueStringPointer(),
-					User:        data.JobRunAsUser.WindowsUser.User.ValueStringPointer(),
-				},
+		if data.JobRunAsUser.WindowsUser != nil {
+			if data.JobRunAsUser.WindowsUser.User.ValueString() != "" {
+				createRequest.JobRunAsUser = &dltypes.JobRunAsUser{
+					Windows: &dltypes.WindowsUser{
+						PasswordArn: data.JobRunAsUser.WindowsUser.PasswordArn.ValueStringPointer(),
+						User:        data.JobRunAsUser.WindowsUser.User.ValueStringPointer(),
+					},
+				}
 			}
 		}
 		if data.JobRunAsUser.RunAs.ValueString() != "" {
@@ -338,30 +342,36 @@ func (r *QueueResource) Update(ctx context.Context, req resource.UpdateRequest, 
 			}
 		}
 	}
-	if data.JobRunAsUser.PosixUser.User.ValueString() != "" {
-		updateRequest.JobRunAsUser = &dltypes.JobRunAsUser{
-			Posix: &dltypes.PosixUser{
-				Group: data.JobRunAsUser.PosixUser.Group.ValueStringPointer(),
-				User:  data.JobRunAsUser.PosixUser.User.ValueStringPointer(),
-			},
+	if data.JobRunAsUser != nil {
+		if data.JobRunAsUser.PosixUser != nil {
+			if data.JobRunAsUser.PosixUser.User.ValueString() != "" {
+				updateRequest.JobRunAsUser = &dltypes.JobRunAsUser{
+					Posix: &dltypes.PosixUser{
+						Group: data.JobRunAsUser.PosixUser.Group.ValueStringPointer(),
+						User:  data.JobRunAsUser.PosixUser.User.ValueStringPointer(),
+					},
+				}
+			}
 		}
-	}
-	if data.JobRunAsUser.WindowsUser.User.ValueString() != "" {
-		updateRequest.JobRunAsUser = &dltypes.JobRunAsUser{
-			Windows: &dltypes.WindowsUser{
-				PasswordArn: data.JobRunAsUser.WindowsUser.PasswordArn.ValueStringPointer(),
-				User:        data.JobRunAsUser.WindowsUser.User.ValueStringPointer(),
-			},
+		if data.JobRunAsUser.WindowsUser != nil {
+			if data.JobRunAsUser.WindowsUser.User.ValueString() != "" {
+				updateRequest.JobRunAsUser = &dltypes.JobRunAsUser{
+					Windows: &dltypes.WindowsUser{
+						PasswordArn: data.JobRunAsUser.WindowsUser.PasswordArn.ValueStringPointer(),
+						User:        data.JobRunAsUser.WindowsUser.User.ValueStringPointer(),
+					},
+				}
+			}
 		}
-	}
-	if data.JobRunAsUser.RunAs.ValueString() != "" {
-		if data.JobRunAsUser.RunAs.ValueString() == "QUEUE_CONFIGURED_USER" {
-			updateRequest.JobRunAsUser.RunAs = dltypes.RunAsQueueConfiguredUser
-		} else if data.JobRunAsUser.RunAs.ValueString() == "WORKER_AGENT_USER" {
-			updateRequest.JobRunAsUser.RunAs = dltypes.RunAsWorkerAgentUser
-		} else {
-			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Invalid value for run_as, got %s", data.JobRunAsUser.RunAs.ValueString()))
-			return
+		if data.JobRunAsUser.RunAs.ValueString() != "" {
+			if data.JobRunAsUser.RunAs.ValueString() == "QUEUE_CONFIGURED_USER" {
+				updateRequest.JobRunAsUser.RunAs = dltypes.RunAsQueueConfiguredUser
+			} else if data.JobRunAsUser.RunAs.ValueString() == "WORKER_AGENT_USER" {
+				updateRequest.JobRunAsUser.RunAs = dltypes.RunAsWorkerAgentUser
+			} else {
+				resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Invalid value for run_as, got %s", data.JobRunAsUser.RunAs.ValueString()))
+				return
+			}
 		}
 	}
 	_, err := r.client.UpdateQueue(ctx, updateRequest)
