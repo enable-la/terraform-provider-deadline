@@ -20,12 +20,17 @@ var _ resource.Resource = &QueueResource{}
 var _ resource.ResourceWithImportState = &QueueResource{}
 
 func New() resource.Resource {
-	return &QueueResource{}
+	return &QueueResource{
+		resourceParentPrefix: "deadline",
+		resourceTypeName:     "queue",
+	}
 }
 
 // QueueResource defines the resource implementation.
 type QueueResource struct {
-	client *deadline.Client
+	client               *deadline.Client
+	resourceParentPrefix string
+	resourceTypeName     string
 }
 
 type QueueResourceConfigurationModel struct {
@@ -87,7 +92,7 @@ type QueueResourceModel struct {
 }
 
 func (r *QueueResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_queue"
+	resp.TypeName = r.typeName()
 }
 
 func (r *QueueResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -410,5 +415,5 @@ func (r *QueueResource) ImportState(ctx context.Context, req resource.ImportStat
 }
 
 func (r *QueueResource) typeName() string {
-	return "deadline_queue"
+	return fmt.Sprintf("%s_%s", r.resourceParentPrefix, r.resourceTypeName)
 }
