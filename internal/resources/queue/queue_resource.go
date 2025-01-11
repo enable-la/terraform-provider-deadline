@@ -20,12 +20,17 @@ var _ resource.Resource = &QueueResource{}
 var _ resource.ResourceWithImportState = &QueueResource{}
 
 func New() resource.Resource {
-	return &QueueResource{}
+	return &QueueResource{
+		resourceParentPrefix: "deadline",
+		resourceTypeName:     "queue",
+	}
 }
 
 // QueueResource defines the resource implementation.
 type QueueResource struct {
-	client *deadline.Client
+	client               *deadline.Client
+	resourceParentPrefix string
+	resourceTypeName     string
 }
 
 type QueueResourceConfigurationModel struct {
@@ -87,7 +92,7 @@ type QueueResourceModel struct {
 }
 
 func (r *QueueResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_queue"
+	resp.TypeName = r.typeName()
 }
 
 func (r *QueueResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -239,20 +244,24 @@ func (r *QueueResource) Create(ctx context.Context, req resource.CreateRequest, 
 		}
 	}
 	if data.JobRunAsUser != nil {
-		if data.JobRunAsUser.PosixUser.User.ValueString() != "" {
-			createRequest.JobRunAsUser = &dltypes.JobRunAsUser{
-				Posix: &dltypes.PosixUser{
-					Group: data.JobRunAsUser.PosixUser.Group.ValueStringPointer(),
-					User:  data.JobRunAsUser.PosixUser.User.ValueStringPointer(),
-				},
+		if data.JobRunAsUser.PosixUser != nil {
+			if data.JobRunAsUser.PosixUser.User.ValueString() != "" {
+				createRequest.JobRunAsUser = &dltypes.JobRunAsUser{
+					Posix: &dltypes.PosixUser{
+						Group: data.JobRunAsUser.PosixUser.Group.ValueStringPointer(),
+						User:  data.JobRunAsUser.PosixUser.User.ValueStringPointer(),
+					},
+				}
 			}
 		}
-		if data.JobRunAsUser.WindowsUser.User.ValueString() != "" {
-			createRequest.JobRunAsUser = &dltypes.JobRunAsUser{
-				Windows: &dltypes.WindowsUser{
-					PasswordArn: data.JobRunAsUser.WindowsUser.PasswordArn.ValueStringPointer(),
-					User:        data.JobRunAsUser.WindowsUser.User.ValueStringPointer(),
-				},
+		if data.JobRunAsUser.WindowsUser != nil {
+			if data.JobRunAsUser.WindowsUser.User.ValueString() != "" {
+				createRequest.JobRunAsUser = &dltypes.JobRunAsUser{
+					Windows: &dltypes.WindowsUser{
+						PasswordArn: data.JobRunAsUser.WindowsUser.PasswordArn.ValueStringPointer(),
+						User:        data.JobRunAsUser.WindowsUser.User.ValueStringPointer(),
+					},
+				}
 			}
 		}
 		if data.JobRunAsUser.RunAs.ValueString() != "" {
@@ -338,30 +347,36 @@ func (r *QueueResource) Update(ctx context.Context, req resource.UpdateRequest, 
 			}
 		}
 	}
-	if data.JobRunAsUser.PosixUser.User.ValueString() != "" {
-		updateRequest.JobRunAsUser = &dltypes.JobRunAsUser{
-			Posix: &dltypes.PosixUser{
-				Group: data.JobRunAsUser.PosixUser.Group.ValueStringPointer(),
-				User:  data.JobRunAsUser.PosixUser.User.ValueStringPointer(),
-			},
+	if data.JobRunAsUser != nil {
+		if data.JobRunAsUser.PosixUser != nil {
+			if data.JobRunAsUser.PosixUser.User.ValueString() != "" {
+				updateRequest.JobRunAsUser = &dltypes.JobRunAsUser{
+					Posix: &dltypes.PosixUser{
+						Group: data.JobRunAsUser.PosixUser.Group.ValueStringPointer(),
+						User:  data.JobRunAsUser.PosixUser.User.ValueStringPointer(),
+					},
+				}
+			}
 		}
-	}
-	if data.JobRunAsUser.WindowsUser.User.ValueString() != "" {
-		updateRequest.JobRunAsUser = &dltypes.JobRunAsUser{
-			Windows: &dltypes.WindowsUser{
-				PasswordArn: data.JobRunAsUser.WindowsUser.PasswordArn.ValueStringPointer(),
-				User:        data.JobRunAsUser.WindowsUser.User.ValueStringPointer(),
-			},
+		if data.JobRunAsUser.WindowsUser != nil {
+			if data.JobRunAsUser.WindowsUser.User.ValueString() != "" {
+				updateRequest.JobRunAsUser = &dltypes.JobRunAsUser{
+					Windows: &dltypes.WindowsUser{
+						PasswordArn: data.JobRunAsUser.WindowsUser.PasswordArn.ValueStringPointer(),
+						User:        data.JobRunAsUser.WindowsUser.User.ValueStringPointer(),
+					},
+				}
+			}
 		}
-	}
-	if data.JobRunAsUser.RunAs.ValueString() != "" {
-		if data.JobRunAsUser.RunAs.ValueString() == "QUEUE_CONFIGURED_USER" {
-			updateRequest.JobRunAsUser.RunAs = dltypes.RunAsQueueConfiguredUser
-		} else if data.JobRunAsUser.RunAs.ValueString() == "WORKER_AGENT_USER" {
-			updateRequest.JobRunAsUser.RunAs = dltypes.RunAsWorkerAgentUser
-		} else {
-			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Invalid value for run_as, got %s", data.JobRunAsUser.RunAs.ValueString()))
-			return
+		if data.JobRunAsUser.RunAs.ValueString() != "" {
+			if data.JobRunAsUser.RunAs.ValueString() == "QUEUE_CONFIGURED_USER" {
+				updateRequest.JobRunAsUser.RunAs = dltypes.RunAsQueueConfiguredUser
+			} else if data.JobRunAsUser.RunAs.ValueString() == "WORKER_AGENT_USER" {
+				updateRequest.JobRunAsUser.RunAs = dltypes.RunAsWorkerAgentUser
+			} else {
+				resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Invalid value for run_as, got %s", data.JobRunAsUser.RunAs.ValueString()))
+				return
+			}
 		}
 	}
 	_, err := r.client.UpdateQueue(ctx, updateRequest)
@@ -400,5 +415,5 @@ func (r *QueueResource) ImportState(ctx context.Context, req resource.ImportStat
 }
 
 func (r *QueueResource) typeName() string {
-	return "deadline_queue"
+	return fmt.Sprintf("%s_%s", r.resourceParentPrefix, r.resourceTypeName)
 }
